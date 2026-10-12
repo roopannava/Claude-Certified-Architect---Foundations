@@ -1,0 +1,53 @@
+### Market Dashboards API — tool-use demo
+# Run each request with the green ▶ button in the gutter (IntelliJ HTTP Client).
+# Backend must be running: ./mvnw spring-boot:run (with ANTHROPIC_API_KEY and
+# FINNHUB_API_KEY exported). Edit the "prompt" and re-run to see which dashboard
+# tool(s) Claude chooses.
+
+### Most shorted only — expect mostShorted populated, the other two empty
+POST http://localhost:8080/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "Show me the most shorted stocks."
+}
+
+### Day losers only — expect dayLosers populated
+POST http://localhost:8080/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "What are today's biggest losers?"
+}
+
+### Two dashboards — expect mostShorted + dayLosers (Claude calls two tools in one turn)
+POST http://localhost:8080/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "Show me the biggest losers and the most shorted stocks."
+}
+
+### All three — expect every dashboard populated
+POST http://localhost:8080/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "Give me all the dashboards."
+}
+
+### Inferred selection — no tool named; expect short squeeze + losers
+POST http://localhost:8080/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "I'm worried about short squeezes and which stocks are tanking today."
+}
+
+### Off-topic — expect NO tools called, every list empty (loop breaks immediately)
+POST http://localhost:8080/api/dashboard
+Content-Type: application/json
+
+{
+  "prompt": "What is the capital of France?"
+}

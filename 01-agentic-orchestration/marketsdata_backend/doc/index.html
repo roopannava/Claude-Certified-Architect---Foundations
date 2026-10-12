@@ -1,0 +1,399 @@
+<title>Market Dashboards</title>
+<style>
+  /* Layout: a single reading column; an eyebrow-labelled stack of sections,
+     code and tables set in mono, kept to ~68ch for comfortable reading. */
+  :root {
+    --bg: #f6f6f4;
+    --surface: #ffffff;
+    --fg: #1c1d22;
+    --muted: #5c5f6b;
+    --line: #e2e2dd;
+    --accent: #2f5fe0;
+    --accent-soft: #eaeffb;
+    --agg: #2f5fe0;
+    --asm: #0f9d8a;
+    --plist: #c2560f;
+    --code-bg: #1d1f27;
+    --code-fg: #e6e7ea;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141519;
+      --surface: #1c1e24;
+      --fg: #e8e9ec;
+      --muted: #9ba0ab;
+      --line: #2b2e36;
+      --accent: #7ea2ff;
+      --accent-soft: #1d2740;
+      --agg: #7ea2ff;
+      --asm: #4fd0bd;
+      --plist: #f09b5f;
+      --code-bg: #0f1116;
+      --code-fg: #e6e7ea;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141519;
+    --surface: #1c1e24;
+    --fg: #e8e9ec;
+    --muted: #9ba0ab;
+    --line: #2b2e36;
+    --accent: #7ea2ff;
+    --accent-soft: #1d2740;
+    --agg: #7ea2ff;
+    --asm: #4fd0bd;
+    --plist: #f09b5f;
+    --code-bg: #0f1116;
+    --code-fg: #e6e7ea;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding-block: 3.5rem 4rem;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.6rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 6vw, 2.8rem);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0 0 0.6rem;
+  }
+  .lede {
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin: 0;
+    max-width: 60ch;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.4rem;
+  }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--muted);
+    background: var(--surface);
+  }
+
+  section { margin-top: 3rem; }
+  h2 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.4rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.6rem 0 0.4rem;
+  }
+  p { margin: 0.7rem 0; }
+  a { color: var(--accent); }
+  strong { font-weight: 600; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    background: var(--accent-soft);
+    color: var(--fg);
+    padding: 0.1em 0.38em;
+    border-radius: 5px;
+  }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    margin: 1rem 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+  .tok-key { color: #8fb5ff; }
+  .tok-str { color: #9ad29a; }
+  .tok-num { color: #e0a26a; }
+  .tok-com { color: #6b7080; }
+
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin: 1.2rem 0 0.4rem;
+  }
+  .node {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 0.85rem 0.9rem;
+    min-width: 0;
+  }
+  .node .k {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+  }
+  .node .d { color: var(--muted); font-size: 0.82rem; margin-top: 0.3rem; }
+  .node.agg { border-top: 3px solid var(--agg); }
+  .node.asm { border-top: 3px solid var(--asm); }
+  .node.plist { border-top: 3px solid var(--plist); }
+  .join {
+    margin-top: 0.75rem;
+    border: 1px dashed var(--accent);
+    border-radius: 10px;
+    background: var(--accent-soft);
+    padding: 0.85rem 0.9rem;
+    text-align: center;
+    font-size: 0.9rem;
+  }
+  .join .k { font-family: var(--font-mono); font-weight: 600; }
+
+  .table-scroll { overflow-x: auto; margin: 1rem 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  th {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.num { text-align: right; }
+
+  .steps { list-style: none; padding: 0; margin: 1rem 0; counter-reset: s; }
+  .steps li {
+    position: relative;
+    padding: 0 0 0 2.4rem;
+    margin-bottom: 1rem;
+    min-height: 1.6rem;
+  }
+  .steps li::before {
+    counter-increment: s;
+    content: counter(s);
+    position: absolute;
+    left: 0; top: 0;
+    width: 1.7rem; height: 1.7rem;
+    display: grid; place-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+  :root[data-theme="dark"] .steps li::before,
+  :root:not([data-theme="light"]) .steps li::before { color: #0f1116; }
+
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  .note {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 0.7rem 0.95rem;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+    margin: 1.2rem 0;
+  }
+  @media (max-width: 520px) {
+    .flow { grid-template-columns: 1fr; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Spring Boot &middot; React &middot; Claude tool use</p>
+    <h1>Market Dashboards</h1>
+    <p class="lede">
+      A small full-stack demo: a React prompt box calls a Spring Boot backend
+      that runs a Claude tool-use agent loop. Each market dashboard is a tool;
+      the prompt decides which dashboards Claude shows.
+    </p>
+    <div class="meta">
+      <span class="chip">Java 21</span>
+      <span class="chip">Spring Boot 4.1.1</span>
+      <span class="chip">React + Vite</span>
+      <span class="chip">Finnhub</span>
+      <span class="chip">POST /api/dashboard</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>What it does</h2>
+    <p>
+      You type a prompt &mdash; for example <code>Show me the biggest losers and
+      the most shorted stocks</code> &mdash; and hit <strong>Show
+      Dashboards</strong>. Claude reads the prompt, calls the dashboard tool(s)
+      you asked for, and the matching tables appear. Three dashboards are
+      available: <strong>Most Shorted Stocks</strong>, <strong>Day
+      Losers</strong>, and <strong>Top Mutual Funds</strong>. Every row is a
+      <code>StockRow</code>: symbol, name, price, day change %, and the
+      dashboard's signature metric.
+    </p>
+    <div class="note">
+      Price and change % are pulled <strong>live from Finnhub</strong>. The
+      signature metric (short % of float, average volume, YTD return) is curated,
+      because Finnhub's free tier does not expose it &mdash; and the 5-symbol
+      membership of each dashboard is curated too.
+    </div>
+  </section>
+
+  <section>
+    <h2>How it flows</h2>
+    <p>
+      One prompt can become several jobs. Claude decides which dashboard tools
+      to call &mdash; zero, one, or more &mdash; and the loop runs each, then
+      hands the results back until Claude is done.
+    </p>
+    <div class="flow" role="img" aria-label="Three dashboard tools Claude can choose to call">
+      <div class="node agg"><div class="k">most_shorted</div><div class="d">heavily shorted stocks</div></div>
+      <div class="node asm"><div class="k">day_losers</div><div class="d">biggest decliners</div></div>
+      <div class="node plist"><div class="k">top_mutual_funds</div><div class="d">top-performing funds</div></div>
+    </div>
+    <div class="join"><span class="k">DashboardServiceImpl</span> &mdash; the tool-use loop runs whichever tools Claude picked</div>
+  </section>
+
+  <section>
+    <h2>Design</h2>
+    <p>
+      A common <code>DataService</code> interface has three implementations, one
+      per <code>ServiceType</code> (<code>MOST_SHORTED</code>,
+      <code>DAY_LOSERS</code>, <code>TOP_MUTUAL_FUNDS</code>). Spring injects all
+      of them into a <code>ServiceFactory</code>, which indexes them by type so a
+      caller asks for a provider by role rather than by class.
+    </p>
+    <pre><code><span class="tok-com">// Claude picks the tools; the factory resolves each one to a provider</span>
+DashboardController  <span class="tok-com">POST /api/dashboard</span>
+        &#8595;
+DashboardServiceImpl &#8594; tool-use loop &#8594; ServiceFactory.get(type) &#8594; DataService
+                                                     &#9500;&#9472; MostShortedServiceImpl
+                                                     &#9500;&#9472; DayLosersServiceImpl
+                                                     &#9492;&#9472; TopMutualFundsServiceImpl</code></pre>
+    <p>
+      <code>DashboardServiceImpl</code> exposes the three providers as tools,
+      sends the prompt to Claude, runs whichever tools Claude requests, feeds the
+      results back, and repeats until Claude stops calling tools. Each provider
+      pulls live quotes through <code>FinnhubClient</code>, which degrades to a
+      curated fallback price on any failure so a dashboard always renders.
+    </p>
+  </section>
+
+  <section>
+    <h2>The data shape</h2>
+    <p>Each provider returns a list of <code>StockRow</code> records (values illustrative; price and change come live from Finnhub):</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Dashboard</th><th>Symbol</th><th>Name</th><th class="num">Price</th><th class="num">Change %</th><th>Metric</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Most Shorted</td><td>CVNA</td><td>Carvana Co.</td><td class="num">live</td><td class="num">live</td><td>Short % Float 38.2%</td></tr>
+          <tr><td>Most Shorted</td><td>GME</td><td>GameStop Corp.</td><td class="num">live</td><td class="num">live</td><td>Short % Float 22.7%</td></tr>
+          <tr><td>Day Losers</td><td>SNAP</td><td>Snap Inc.</td><td class="num">live</td><td class="num">live</td><td>Avg Volume 38.1M</td></tr>
+          <tr><td>Day Losers</td><td>LCID</td><td>Lucid Group, Inc.</td><td class="num">live</td><td class="num">live</td><td>Avg Volume 72.0M</td></tr>
+          <tr><td>Top Mutual Funds</td><td>VFIAX</td><td>Vanguard 500 Admiral</td><td class="num">~NAV</td><td class="num">live/0</td><td>YTD Return +18.4%</td></tr>
+          <tr><td>Top Mutual Funds</td><td>FCNTX</td><td>Fidelity Contrafund</td><td class="num">~NAV</td><td class="num">live/0</td><td>YTD Return +21.5%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Each dashboard holds <strong>5 rows</strong>. Only the dashboards Claude
+      called come back populated; the rest are empty.
+    </p>
+  </section>
+
+  <section>
+    <h2>The endpoint</h2>
+    <pre><code>curl -X POST http://localhost:8080/api/dashboard \
+  -H <span class="tok-str">'Content-Type: application/json'</span> \
+  -d <span class="tok-str">'{"prompt":"show me the biggest losers and the most shorted stocks"}'</span></code></pre>
+    <p>Response (trimmed):</p>
+    <pre><code>{
+  <span class="tok-key">"prompt"</span>: <span class="tok-str">"show me the biggest losers and the most shorted stocks"</span>,
+  <span class="tok-key">"mostShorted"</span>:    [ <span class="tok-com">/* 5 rows */</span> ],
+  <span class="tok-key">"dayLosers"</span>:      [ <span class="tok-com">/* 5 rows */</span> ],
+  <span class="tok-key">"topMutualFunds"</span>: [ <span class="tok-com">/* empty: not requested */</span> ]
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>Run it locally</h2>
+    <ol class="steps">
+      <li>
+        <strong>Backend</strong> &mdash; starts on port 8080. Needs two keys in
+        the environment.
+        <pre><code>cd marketsdata_backend
+export ANTHROPIC_API_KEY=sk-ant-...
+export FINNHUB_API_KEY=...
+./mvnw spring-boot:run</code></pre>
+      </li>
+      <li>
+        <strong>Frontend</strong> &mdash; starts on port 5173. Vite proxies
+        <code>/api</code> to <code>:8080</code>, so the browser sees one origin
+        and no CORS setup is required.
+        <pre><code>cd marketsdata_frontend
+npm install
+npm run dev</code></pre>
+      </li>
+      <li>
+        Open <code>http://localhost:5173</code>, type a prompt, and click
+        <strong>Show Dashboards</strong>. A table appears for each dashboard
+        Claude chose.
+      </li>
+    </ol>
+  </section>
+
+  <footer>
+    Standalone demo. Backend: Spring Boot 4.1.1 on Java 21, package
+    <code>com.marketsdata</code>. Frontend: React + Vite.
+  </footer>
+</div>
